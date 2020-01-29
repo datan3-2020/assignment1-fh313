@@ -1,7 +1,7 @@
 ---
 title: "Statistical assignment 1"
-author: "[add your name and candidate number here]"
-date: "[add date here]"
+author: "Francesca Hume 660024948"
+date: "29/01/2020"
 output: github_document
 ---
 
@@ -14,8 +14,9 @@ knitr::opts_chunk$set(echo = TRUE)
 In this assignment you will work with the individual level data from wave 8 of the Understanding Society survey. First, you need to open the data set. Please complete the code below.
 
 ```{r}
-library(tidyverse)
-Data <- ...
+library("tidyverse")
+
+Data <- read_tsv("/Users/chescamae98/Desktop/UKDA-6614-tab/tab/ukhls_w8/h_indresp.tab")
 ```
 
 Now you have got your data frame stored as Data. 
@@ -30,7 +31,7 @@ Complete the code below to select those variables from the data frame and save t
 
 ```{r}
 Data <- Data %>%
-        select(...)
+  select(pidp, h_memorig, h_eumem, h_sex_dv, h_age_dv)
 ```
 
 ## Filter observations (10 points)
@@ -38,8 +39,8 @@ Data <- Data %>%
 To make nationally representative estimates from the Understanding Society data we would need to use weight coefficients. There are many different types of weight coefficients that can be used depending on the question and the level of analysis (see the User Guide, pp. 65-71). We will not do this in this assignment. However, what we want to do is to keep data from the original Understanding Society sample only (ukhls gb 2009-10), dropping  data for Northern Ireland, the BHPS cohort members and ethnic minority boost samples. This will make data closer to be representative for Great Britain. You need to choose the observations where *h_memorig* has the value of 1.
 
 ```{r}
-Data <- Data %>%
-        filter(...)
+Data<- Data %>%
+  filter(h_memorig == 1)
 ```
 
 ## Recode data (20 points)
@@ -64,13 +65,29 @@ In all cases, we want to create new variables.
 
 ```{r}
 Data <- Data %>%
-        mutate(EU = ...
-      
-        ) %>%
-        mutate(sex = ...) %>%
-        mutate(agegr = ...
-        )
+  mutate(EU = case_when(
+    h_eumem < 1 ~ NA_real_,
+    h_eumem == 1 ~ 1,
+    h_eumem == 2 ~ 0,
+    )) %>%
+  mutate(sex = recode(h_sex_dv,
+                      `1` = "male",
+                      `2` = "female",
+                      `0` = NA_character_,
+                      ))%>%
+  mutate(agegr = case_when(
+    between(h_age_dv, 16, 25) ~ "16 to 25",
+    between(h_age_dv, 26, 40) ~ "26 to 40",
+    between(h_age_dv, 41, 55) ~ "41 to 55",
+    between(h_age_dv, 56, 70) ~ "56 to 70",
+    h_age_dv > 70 ~ "over 70" ))
 
+
+
+table(Data$EU)
+table(Data$h_sex_dv)
+table(Data$sex)
+table(Data$agegr)
 ```
 
 ## Summarise data (20 points)
@@ -79,11 +96,15 @@ Let us **dplyr** to calculate how many people in the sample supported Remain and
 
 ```{r}
 Data %>%
-        ...
+  count(EU) %>%
+  mutate(perc = n / sum(n) * 100)
+
         
 ```
 
 Write a couple of sentences with the interpretation of this result. How this compares with the result of the 2016 referendum? Why?
+
+The results suggest that 40.7% of respondents answered that the UK should leave the EU, whereas 48.4% answered that the UK should remain a member of the EU. The 2016 referendum saw the majority voting to leave the EU (52%) rather than remain (48%) which is the opposite of the result implied by the Understanding society data. Some possible reasons why this could be include the number of people in the understanding society dataset that answered I dont know/ NA were more likely to then vote to leave, also, the understanding society dataset does not include the whole population of the UK, just a sample of it, and thus may not be compeltely representative. 
 
 ## Summarise data by sex and age (30 points)
 
@@ -91,10 +112,23 @@ Now let us look at the support for Leave and Remain by sex and age. Use your new
 
 
 ```{r}
+summary(Data$EU)
+
+
+
+
 Data %>%
-        ...
+  filter(!is.na(sex)) %>%
+  mutate(remain = ifelse(EU == 1, TRUE,
+                                   ifelse(EU == 0, FALSE, NA))) %>%
+  group_by( sex, agegr) %>%
+  summarise(
+    propEU = mean(remain, na.rm = TRUE) * 100)
+
         
 ```
 
 
 Write a couple of sentences interpreting your results.
+
+The shows the proportions of age gender in each age group that wanted to remain in the EU. What can be seen is that in the younger age groups (i.e. 16 - 25), generally a higher proportion of males and females wanted to remain (i.e. 66% and 72% respectively in 16-25), than in the older age groups (i.e. in the over 70s, only (44% of females and 38% of males wished to remain). In addition, in every age group, a higher proportion of females said they wished to remain than the proportion of males. 
